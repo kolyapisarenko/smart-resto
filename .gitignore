@@ -1,0 +1,15 @@
+# Залежності
+node_modules/
+/dist
+/.next/
+out/
+
+# Локальні змінні середовища та секрети
+.env
+.env.local
+.env.development.local
+
+# Логи та системні файли
+npm-debug.log*
+.DS_Store
+/coverage

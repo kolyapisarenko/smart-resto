@@ -1,0 +1,100 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// 1. Користувачі (Персонал закладу)
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // Хешований пароль
+  role      Role     @default(WAITER)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  WAITER
+  KITCHEN
+}
+
+// 2. Елементи Меню (Страви)
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  title       String
+  price       Float
+  category    String
+  desc        String
+  isAvailable Boolean     @default(true)
+  img_url      String
+  orderItems  OrderItem[]
+}
+
+// 3. Замовлення
+model Order {
+  id            Int         @id @default(autoincrement())
+  tableId       Int?        // Номер столика (null якщо самовивіз)
+  table         Table?        @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  status        OrderStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(UNPAID)
+  transactionId String?
+  totalAmount   Float
+  createdAt     DateTime    @default(now())
+  items         OrderItem[]
+}
+
+// 4. Зв'язуюча таблиця для страв у замовленні (Багато до Багатьох)
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId      Int
+  menuItem    MenuItem @relation(fields: [itemId], references: [id])
+  quantity    Int
+  priceAtSale Float    // Фіксація ціни на момент продажу
+}
+
+enum OrderStatus {
+  PENDING
+  COOKING
+  READY
+  SERVED
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+}
+
+// 5. Сервісні виклики від столиків (Офіціант / Рахунок / Допомога)
+model ServiceCall {
+  tableId   Int      @id // Робимо tableId первинним ключем, щоб від одного столу міг бути лише один активний виклик
+  type      CallType
+  createdAt DateTime @default(now())
+}
+
+enum CallType {
+  WAITER
+  BILL
+  HELP
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  DIRTY
+}
+
+model Table {
+  id        Int         @id @default(autoincrement())
+  number    Int         @unique
+  capacity  Int
+  status    TableStatus @default(FREE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  orders    Order[]     // Тепер Prisma бачить протилежне поле `table` в моделі Order і все завалідує!
+}
